@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, Modal
 import PartnerHeader from './header_partner';
 import Constants from 'expo-constants'; // Importa expo-constants per accedere a app.json
 import { getPromotion } from '../services/api_functions'; // Import della funzione
-import { WebView } from 'react-native-webview'; // Importa WebView
+import { getReservations } from '../services/api_functions'; // Import della funzione
 
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval, startOfWeek, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -27,6 +27,7 @@ const RestaurantScreen = ({ navigation, route }) => {
   const guestOption = Array.from({ length: 10 }, (_, i) => i + 1);
   const timeOption = ["12:00", "12:30", "13:00", "13:30", "14:00","19:30","20:00","20:30","21:00","21:30","22:00"];
 
+  const [selectedDate, setSelectedDate] = useState(null); // Stato per la data selezionata
   const [guestNumber, setGuestNumber] = useState("2");
   const [reservationTime, setReservationTime] = useState("20:30");
   const [isGuestDropdownOpen, setIsGuestDropdownOpen] = useState(false);
@@ -46,7 +47,6 @@ const RestaurantScreen = ({ navigation, route }) => {
     setIsTimeDropdownOpen(false);
   };
 
-  const [selectedDate, setSelectedDate] = useState(null); // Stato per la data selezionata
   
   useEffect(() => {
     navigation.setOptions({
@@ -104,10 +104,41 @@ const RestaurantScreen = ({ navigation, route }) => {
     setSelectedDate(null);
   };
 
-  // Funzione per aprire il popoup di conferma
-  const handleOpenPopup = () => {
-    setPopupVisible(true);
+  const nearbyReservation = (prenotazioni, selectedDate, reservationTime) => {
+    const selectedDateObj = new Date(selectedDate);
+    // Costruisce la data target combinando selectedDate (solo la parte giorno) + orario
+    const [hours, minutes] = reservationTime.split(':').map(Number);
+    const targetDate = new Date(selectedDateObj);
+    targetDate.setHours(hours);
+    targetDate.setMinutes(minutes);
+    targetDate.setSeconds(0);
+    targetDate.setMilliseconds(0);
+    // Intervallo di ±4 ore in millisecondi
+    const timeWindowMs = 4 * 60 * 60 * 1000;
+    return prenotazioni.some((prenotazione) => {
+      const prenotazioneDate = new Date(prenotazione.data);
+      const diff = Math.abs(prenotazioneDate - targetDate);
+      return diff <= timeWindowMs;
+    });
   };
+
+  // Funzione per aprire il popoup di conferma
+  const handleOpenPopup = async () => {
+    try {
+      const prenotazioni = await getReservations(tokenData.bookingID);
+      const prenotazioneEsistente = nearbyReservation(prenotazioni, selectedDate, reservationTime);
+      if (prenotazioneEsistente) {
+        console.log('⚠️ C’è già una prenotazione vicina!');
+      } else {
+        console.log('✅ Nessun conflitto di prenotazione.');
+      }
+
+      setPopupVisible(true);
+    } catch (error) {
+      console.error('Errore durante apertura popup:', error);
+    }
+  };
+  
 
   // Funzione per chiudere il popup di conferma
   const handleClosePopup = () => {

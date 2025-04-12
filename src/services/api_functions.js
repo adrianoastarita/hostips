@@ -210,3 +210,14 @@ export const getCoupon = async (bookingID=null,partnerID=null) => {
         }
     }
 };
+
+// Funzione per importare le prenotazioni dell'ospite
+export const getReservations = async (bookingID) => {
+  try {
+    const response = await axios.get(`${backendUrl}/api/get-reservations/${bookingID}`);
+    return response.data; // restituisce le prenotazioni trovate
+  } catch (error) {
+    console.error('Errore nel caricamento delle prenotazioni:', error);
+    throw error;
+  }
+};
