@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { startOfMonth, endOfMonth, addDays, eachDayOfInterval, subMonths, addMonths, format, isSameDay, isSameMonth } from 'date-fns';
 import { it } from 'date-fns/locale';
 
-const Calendar = ({ onDateSelect }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+const Calendar = ({ onDateSelect, availableDates = [], initialDate = new Date() }) => {
+  const [currentDate, setCurrentDate] = useState(new Date(initialDate));
   const [selectedDay, setSelectedDay] = useState(null); // Stato per il giorno selezionato
     
   // Funzione per calcolare il primo giorno del mese corrente
@@ -54,6 +54,12 @@ const Calendar = ({ onDateSelect }) => {
     onDateSelect(day);  // Passa la data selezionata al genitore
   };
 
+  const isDateSelectable = (day) => {
+    return availableDates.some(availableDate =>
+      isSameDay(new Date(availableDate), day)
+    );
+  };
+
   return (
     <View style={styles.calendarContainer}>
       {/* Header con mese e frecce */}
@@ -79,12 +85,18 @@ const Calendar = ({ onDateSelect }) => {
         {daysInMonth().map((week, index) => (
           <View key={index} style={styles.weekRow}>
             {week.map((day, dayIndex) => (
-              <TouchableOpacity key={dayIndex} onPress={() => handleDayPress(day)} style={styles.dayCellWrapper}>
+              <TouchableOpacity
+                key={dayIndex}
+                onPress={() => isDateSelectable(day) && handleDayPress(day)}
+                style={styles.dayCellWrapper}
+                disabled={!isDateSelectable(day)} // <-- disabilita se non selezionabile
+              >
                 <Text
                   style={[
                     styles.dayCell,
-                    selectedDay && isSameDay(day, selectedDay) && styles.selectedDay, // Confronta l'intera data e applica sempre la formattazione selezionata
-                    !isSameDay(day, selectedDay) && !isSameMonth(day, currentDate) && styles.otherMonthDay, // Solo se il giorno non è selezionato e non è nel mese corrente, applichiamo otherMonthDay
+                    selectedDay && isSameDay(day, selectedDay) && styles.selectedDay,
+                    !isSameDay(day, selectedDay) && !isSameMonth(day, currentDate) && styles.otherMonthDay,
+                    !isDateSelectable(day) && styles.disabledDay, // nuovo stile per i giorni disabilitati
                   ]}
                 >
                   {format(day, 'd')}
@@ -160,6 +172,10 @@ const styles = {
   otherMonthDay: {
     color: 'lightgrey', // Colore più tenue per i giorni fuori dal mese corrente
   },
+  disabledDay: {
+    color: '#ccc',
+    opacity: 0.4,
+  },  
 };
 
 export default Calendar;

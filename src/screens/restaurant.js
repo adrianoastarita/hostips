@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, Modal, Image, FlatList } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, Modal, Image, FlatList, Button } from 'react-native';
 import PartnerHeader from './header_partner';
 import Constants from 'expo-constants'; // Importa expo-constants per accedere a app.json
 import { getPromotion } from '../services/api_functions'; // Import della funzione
 import { WebView } from 'react-native-webview'; // Importa WebView
 
-import { format, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval, startOfWeek } from 'date-fns';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval, startOfWeek, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import Calendar from './calendar.js';
 
@@ -19,29 +19,35 @@ const RestaurantScreen = ({ navigation, route }) => {
   const [isWebViewVisible, setIsWebViewVisible] = useState(false); // Stato per WebView
   const [baseUrl, setBaseUrl] = useState('');  // Aggiungi uno stato per il baseUrl
 
-    const guestOption = Array.from({ length: 10 }, (_, i) => i + 1);
-    const timeOption = ["12:00", "12:30", "13:00", "13:30", "14:00","19:30","20:00","20:30","21:00","21:30","22:00"];
+  const availableDates = eachDayOfInterval({
+    start: parseISO(tokenData.checkin),
+    end: parseISO(tokenData.checkout),
+  });
 
-    const [guestNumber, setGuestNumber] = useState("2");
-    const [reservationTime, setReservationTime] = useState("20:30");
-    const [isGuestDropdownOpen, setIsGuestDropdownOpen] = useState(false);
-    const [isTimeDropdownOpen, setIsTimeDropdownOpen] = useState(false);
+  const guestOption = Array.from({ length: 10 }, (_, i) => i + 1);
+  const timeOption = ["12:00", "12:30", "13:00", "13:30", "14:00","19:30","20:00","20:30","21:00","21:30","22:00"];
+
+  const [guestNumber, setGuestNumber] = useState("2");
+  const [reservationTime, setReservationTime] = useState("20:30");
+  const [isGuestDropdownOpen, setIsGuestDropdownOpen] = useState(false);
+  const [isTimeDropdownOpen, setIsTimeDropdownOpen] = useState(false);
+  const [popupVisible, setPopupVisible] = useState(false);
+
+  const toggleGuestDropdown = () => setIsGuestDropdownOpen(!isGuestDropdownOpen);
+  const toggleTimeDropdown = () => setIsTimeDropdownOpen(!isTimeDropdownOpen);
+
+  const handleGuestSelect = (value) => {
+    setGuestNumber(value);
+    setIsGuestDropdownOpen(false);
+  };
+
+  const handleTimeSelect = (value) => {
+    setReservationTime(value);
+    setIsTimeDropdownOpen(false);
+  };
+
+  const [selectedDate, setSelectedDate] = useState(null); // Stato per la data selezionata
   
-    const toggleGuestDropdown = () => setIsGuestDropdownOpen(!isGuestDropdownOpen);
-    const toggleTimeDropdown = () => setIsTimeDropdownOpen(!isTimeDropdownOpen);
-
-    const handleGuestSelect = (value) => {
-      setGuestNumber(value);
-      setIsGuestDropdownOpen(false);
-    };
-
-    const handleTimeSelect = (value) => {
-      setReservationTime(value);
-      setIsTimeDropdownOpen(false);
-    };
-
-    const [selectedDate, setSelectedDate] = useState(null); // Stato per la data selezionata
-    
   useEffect(() => {
     navigation.setOptions({
         header: () => <PartnerHeader headerData={[partner.catID, partner._id]} />,
@@ -98,102 +104,118 @@ const RestaurantScreen = ({ navigation, route }) => {
     setSelectedDate(null);
   };
 
+  // Funzione per aprire il popoup di conferma
+  const handleOpenPopup = () => {
+    setPopupVisible(true);
+  };
+
+  // Funzione per chiudere il popup di conferma
+  const handleClosePopup = () => {
+    setPopupVisible(false);
+  };
+
+  useEffect(() => {
+    if (!popupVisible) {
+      handleCloseWebView();
+    }
+  }, [popupVisible]);
+
   return (
     <View style={styles.container}>
-      
-          
-          <Modal visible={isWebViewVisible} animationType="slide" transparent={true} onRequestClose={handleCloseWebView} >
-            <View style={styles.modalContainer}>
-              <TouchableOpacity onPress={handleCloseWebView} style={styles.closeButton}>
-                <Image
-                  source={require('../icons/icon_ics.png')}
-                  style={styles.closeIcon}
-                />
-              </TouchableOpacity>
+  
+      <Modal visible={isWebViewVisible} animationType="slide" transparent={true} onRequestClose={handleCloseWebView} >
+        <View style={styles.modalContainer}>
+          <TouchableOpacity onPress={handleCloseWebView} style={styles.closeButton}>
+            <Image
+              source={require('../icons/icon_ics.png')}
+              style={styles.closeIcon}
+            />
+          </TouchableOpacity>
 
-              {/* Contenitore con topView e bottomView */}
-              <View style={styles.modalContentContainer}>
-                
-                <View style={styles.modalTopView}>
-
-                  <View style={styles.modalTopLeftView}>
-                    <Image source={require('../icons/icon_guests.png')} style={styles.optionIcon} />
-
-                      {/* Dropdown per il numero di ospiti */}
-                      <TouchableOpacity onPress={toggleGuestDropdown}>
-                        <Text style={styles.guestText}>{guestNumber}</Text>
-                      </TouchableOpacity>
-
-                      {/* Dropdown per la selezione del numero di ospiti */}
-                      {isGuestDropdownOpen && (
-                        <View style={styles.guestDropdown}>
-                          <FlatList
-                            data={guestOption}
-                            keyExtractor={(item) => item.toString()}
-                            renderItem={({ item }) => (
-                              <TouchableOpacity onPress={() => handleGuestSelect(item)}>
-                                <Text style={styles.itemText}>{item}</Text>
-                              </TouchableOpacity>
-                            )}
-                            showsVerticalScrollIndicator={false}
-                          />
-                        </View>
-                      )}
-                    
-                  </View>
-
-                  <View style={styles.modalTopRightView}>
-
-                      {/* Dropdown per l'orario */}
-                      <TouchableOpacity onPress={toggleTimeDropdown}>
-                        <Text style={styles.timeText}>{reservationTime}</Text>
-                      </TouchableOpacity>
-
-                      {/* Dropdown per la selezione dell'orario */}
-                      {isTimeDropdownOpen && (
-                        <View style={styles.timeDropdown}>
-                          <FlatList
-                            data={timeOption}
-                            keyExtractor={(item) => item.toString()}
-                            renderItem={({ item }) => (
-                              <TouchableOpacity onPress={() => handleTimeSelect(item)}>
-                                <Text style={styles.itemText}>{item}</Text>
-                              </TouchableOpacity>
-                            )}
-                            showsVerticalScrollIndicator={false}
-                          />
-                        </View>
-                      )}
-          
-                    <Image source={require('../icons/icon_clock.png')} style={styles.optionIcon} />
-          
-                  </View>
-          
-                </View>
-          
-                <View style={styles.modalMainView} >
-                    <Calendar onDateSelect={(date) => setSelectedDate(date)} />
-                </View>
-          
-              <View style={styles.modalBottomView}>
-                <TouchableOpacity onPress={handleOpenWebView} disabled={!selectedDate}>
-                  <Text
-                    style={[
-                      styles.text3,
-                      {
-                        color: selectedDate ? 'grey' : 'lightgrey', // Colore grigio chiaro se non selezionata
-                      },
-                    ]}
-                  >
-                    PRENOTA
-                  </Text>
-                </TouchableOpacity>
+          {/* Contenitore con topView e bottomView */}
+          <View style={styles.modalContentContainer}>
+            <View style={styles.modalTopView}>
+              <View style={styles.modalTopLeftView}>
+                <Image source={require('../icons/icon_guests.png')} style={styles.optionIcon} />
+                  {/* Dropdown per il numero di ospiti */}
+                  <TouchableOpacity onPress={toggleGuestDropdown}>
+                    <Text style={styles.guestText}>{guestNumber}</Text>
+                  </TouchableOpacity>
+                  {/* Dropdown per la selezione del numero di ospiti */}
+                  {isGuestDropdownOpen && (
+                    <View style={styles.guestDropdown}>
+                      <FlatList
+                        data={guestOption}
+                        keyExtractor={(item) => item.toString()}
+                        renderItem={({ item }) => (
+                          <TouchableOpacity onPress={() => handleGuestSelect(item)}>
+                            <Text style={styles.itemText}>{item}</Text>
+                          </TouchableOpacity>
+                        )}
+                        showsVerticalScrollIndicator={false}
+                      />
+                    </View>
+                  )}
               </View>
 
-          
+              <View style={styles.modalTopRightView}>
+                  {/* Dropdown per l'orario */}
+                  <TouchableOpacity onPress={toggleTimeDropdown}>
+                    <Text style={styles.timeText}>{reservationTime}</Text>
+                  </TouchableOpacity>
+                  {/* Dropdown per la selezione dell'orario */}
+                  {isTimeDropdownOpen && (
+                    <View style={styles.timeDropdown}>
+                      <FlatList
+                        data={timeOption}
+                        keyExtractor={(item) => item.toString()}
+                        renderItem={({ item }) => (
+                          <TouchableOpacity onPress={() => handleTimeSelect(item)}>
+                            <Text style={styles.itemText}>{item}</Text>
+                          </TouchableOpacity>
+                        )}
+                        showsVerticalScrollIndicator={false}
+                      />
+                    </View>
+                  )}
+                <Image source={require('../icons/icon_clock.png')} style={styles.optionIcon} />
               </View>
             </View>
-          </Modal>
+      
+            <View style={styles.modalMainView} >
+              <Calendar onDateSelect={(date) => setSelectedDate(date)} availableDates={availableDates} initialDate={tokenData.checkin}/>
+            </View>
+      
+            <View style={styles.modalBottomView}>
+              <TouchableOpacity onPress={handleOpenPopup} disabled={!selectedDate}>
+                <Text style={[styles.text3,{color: selectedDate ? 'grey' : 'lightgrey',},]}>PRENOTA</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Modal di conferma */}
+            <Modal visible={popupVisible} transparent={true} onRequestClose={handleClosePopup}>
+              <View style={styles.popupBackground}>
+                <View style={styles.popupContent}>
+                  <Text style={styles.popupTitleText}>La tua prenotazione</Text>
+                  <Text style={styles.popupText}>{selectedDate ? selectedDate.toLocaleDateString() : ''}</Text>
+                  <Text style={styles.popupText}>Ore {reservationTime}</Text>
+                  <Text style={styles.popupText}>{guestNumber} Ospiti</Text>
+                  <View style={styles.popupActions}>
+                    <Button title="Annulla" onPress={handleClosePopup} />
+                    <Button title="Conferma" onPress={() => {
+                      // Aggiungi qui la logica per confermare la prenotazione
+                      console.log('Prenotazione confermata');
+                      handleClosePopup();
+                    }} />
+                  </View>
+                </View>
+              </View>
+            </Modal>
+
+          </View>
+        </View>
+      </Modal>
+
 
 
       {/* Contenuto principale */}
@@ -486,6 +508,38 @@ const styles = StyleSheet.create({
     color: 'black',
     textAlign: 'center',
   },
+
+  popupBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Sfondo semitrasparente
+  },
+  popupContent: {
+    width: 300,
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  popupText: {
+    fontSize: 18,
+    marginBottom: 5,
+    textAlign: 'center',
+  },
+  popupTitleText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  popupActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 20,
+  },
+
 });
 
 export default RestaurantScreen;
