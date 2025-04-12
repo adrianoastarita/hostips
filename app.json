@@ -33,7 +33,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "BACKEND_URL": "http://192.168.1.4:3000"
+      "BACKEND_URL": "https://hostips-backend.onrender.com"
     }
   }
 }
