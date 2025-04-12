@@ -8,6 +8,8 @@ import { getReservations } from '../services/api_functions'; // Import della fun
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval, startOfWeek, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import Calendar from './calendar.js';
+import DateSelector from './calendarList';
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -32,7 +34,9 @@ const RestaurantScreen = ({ navigation, route }) => {
   const [reservationTime, setReservationTime] = useState("20:30");
   const [isGuestDropdownOpen, setIsGuestDropdownOpen] = useState(false);
   const [isTimeDropdownOpen, setIsTimeDropdownOpen] = useState(false);
-  const [popupVisible, setPopupVisible] = useState(false);
+  const [confirmPopupVisible, setConfirmPopupVisible] = useState(false);
+  const [warningPopupVisible, setWarningPopupVisible] = useState(false);
+
 
   const toggleGuestDropdown = () => setIsGuestDropdownOpen(!isGuestDropdownOpen);
   const toggleTimeDropdown = () => setIsTimeDropdownOpen(!isTimeDropdownOpen);
@@ -131,9 +135,8 @@ const RestaurantScreen = ({ navigation, route }) => {
         console.log('⚠️ C’è già una prenotazione vicina!');
       } else {
         console.log('✅ Nessun conflitto di prenotazione.');
+        setConfirmPopupVisible(true);
       }
-
-      setPopupVisible(true);
     } catch (error) {
       console.error('Errore durante apertura popup:', error);
     }
@@ -142,14 +145,14 @@ const RestaurantScreen = ({ navigation, route }) => {
 
   // Funzione per chiudere il popup di conferma
   const handleClosePopup = () => {
-    setPopupVisible(false);
+    setConfirmPopupVisible(false);
   };
 
   useEffect(() => {
-    if (!popupVisible) {
+    if (!confirmPopupVisible) {
       handleCloseWebView();
     }
-  }, [popupVisible]);
+  }, [confirmPopupVisible]);
 
   return (
     <View style={styles.container}>
@@ -214,7 +217,7 @@ const RestaurantScreen = ({ navigation, route }) => {
             </View>
       
             <View style={styles.modalMainView} >
-              <Calendar onDateSelect={(date) => setSelectedDate(date)} availableDates={availableDates} initialDate={tokenData.checkin}/>
+                <DateSelector availableDates={availableDates} onDateSelect={(date) => setSelectedDate(date)} />
             </View>
       
             <View style={styles.modalBottomView}>
@@ -224,7 +227,7 @@ const RestaurantScreen = ({ navigation, route }) => {
             </View>
 
             {/* Modal di conferma */}
-            <Modal visible={popupVisible} transparent={true} onRequestClose={handleClosePopup}>
+            <Modal visible={confirmPopupVisible} transparent={true} onRequestClose={handleClosePopup}>
               <View style={styles.popupBackground}>
                 <View style={styles.popupContent}>
                   <Text style={styles.popupTitleText}>La tua prenotazione</Text>
@@ -441,13 +444,13 @@ const styles = StyleSheet.create({
   },
   modalContentContainer: {
     width: '90%',
-    height: '55%',
+    height: '35%',
     backgroundColor: 'transparent',
     borderRadius: 10,
     overflow: 'hidden',
   },
   modalTopView: {
-    flex: 0.15,
+    flex: 0.25,
     flexDirection: 'row',
     backgroundColor: 'transparent',
   },
@@ -469,11 +472,11 @@ const styles = StyleSheet.create({
     paddingRight: 5,
   },
   modalMainView: {
-    flex: 0.7,
+    flex: 0.5,
     backgroundColor: 'white',
   },
   modalBottomView: {
-    flex: 0.15,
+    flex: 0.25,
     backgroundColor: 'white',
     justifyContent: 'flex-start',
     paddingTop: 20,

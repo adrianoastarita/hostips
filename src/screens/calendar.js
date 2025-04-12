@@ -1,3 +1,6 @@
+// Va importato così...              
+//<Calendar onDateSelect={(date) => setSelectedDate(date)} availableDates={availableDates} initialDate={tokenData.checkin}/>
+
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { startOfMonth, endOfMonth, addDays, eachDayOfInterval, subMonths, addMonths, format, isSameDay, isSameMonth } from 'date-fns';
